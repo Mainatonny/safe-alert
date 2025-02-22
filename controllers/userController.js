@@ -1,12 +1,14 @@
 const User = require('../models/User');
 
 // Get all users
-const getAllUsers = async (req, res) => {
+const getAllUsers = async () => {
   try {
     const users = await User.find();
-    res.json(users);
+    return users;
   } catch (error) {
-    res.status(500).json({ error: 'Server Error' });
+    console.error("Error retrieving users:", error);
+    // Instead of error.status, use error.message or error.toString()
+    throw new Error(error.message || error.toString());
   }
 };
 

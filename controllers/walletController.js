@@ -6,25 +6,46 @@ const paypal = require('@paypal/checkout-server-sdk');
  * Utility function to create a PayPal order
  * @param {number} amount - Amount to be charged
  */
-/**async function createPayPalOrder(amount) {
-  const request = new paypal.orders.OrdersCreateRequest();
-  request.prefer('return=representation');
-  request.requestBody({
-    intent: 'CAPTURE',
-    purchase_units: [
-      {
-        amount: {
-          currency_code: 'USD',
-          value: amount.toFixed(2)
-        }
-      }
-    ]
-  });
-  return paypalClient.execute(request);
-}**/
+
+// Fetch wallet balance
+const getWalletBalance = async (req, res) => {
+  try {
+    const userId = req.user.id; // Get user ID from auth middleware
+    const wallet = await Wallet.findOne({ userId });
+
+    if (!wallet) {
+      return res.status(404).json({ message: "Wallet not found" });
+    }
+
+    res.json({ balance: wallet.balance });
+  } catch (error) {
+    console.error("Error fetching wallet balance:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
 
 
-exports.addFundsWithPayPal = async (req, res) => {
+const getWallet = async (req, res) => {
+  try {
+    // Use req.user.id provided by the auth middleware
+    const wallet = await Wallet.findOne({ userId: req.user.id });
+    if (!wallet) {
+      return res.status(404).json({ message: 'Wallet not found' });
+    }
+    res.status(200).json({
+      balance: wallet.balance,
+      transactions: wallet.transactionHistory, // Assumes this field stores an array of transactions
+    });
+  } catch (error) {
+    console.error("Error fetching wallet:", error);
+    res.status(500).json({
+      message: "Error fetching wallet data",
+      error: error.message || error.toString(),
+    });
+  }
+};
+
+const addFundsWithPayPal = async (req, res) => {
   try {
     const amount = parseFloat(req.body.amount);
 
@@ -70,7 +91,7 @@ exports.addFundsWithPayPal = async (req, res) => {
 /**
  * Capture PayPal payment and update wallet balance
  */
-exports.capturePayPalPayment = async (req, res) => {
+const capturePayPalPayment = async (req, res) => {
   const { orderID } = req.body;
 
   if (!orderID || typeof orderID !== 'string') {
@@ -118,6 +139,13 @@ exports.capturePayPalPayment = async (req, res) => {
     console.error('PayPal payment capture failed:', error);
     res.status(500).json({ message: 'PayPal payment capture failed.' });
   }
+};
+
+module.exports = {
+  getWallet,
+  addFundsWithPayPal,
+  capturePayPalPayment,
+  getWalletBalance,
 };
 
 

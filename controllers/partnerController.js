@@ -1,9 +1,10 @@
 const User = require('../models/User');
-
+const Campaign = require('../models/Campaign');
 
 const Partner = require('../models/Partner'); // Assuming you have a Partner schema
 const Transaction = require('../models/Transaction'); // Assuming you have a Transaction schema
 const crypto = require('crypto');
+
 
 // Sign up as a partner and generate referral code
 
@@ -30,6 +31,146 @@ const getPartnerStatus = async (req, res) => {
   } catch (error) {
     console.error('Partner status error:', error);
     res.status(500).json({ error: 'Error checking partner status' });
+  }
+};
+
+const getAllPartners = async (req, res) => {
+  try {
+    const partners = await User.find({ isPartner: true }).select('name email referralCode partnerSince').lean();
+    res.status(200).json(partners);
+  } catch (error) {
+    console.error("Error fetching partners:", error);
+    res.status(500).json({ error: "Failed to fetch partners" });
+  }
+};
+
+// Get ad revenue for a partner (simulate ad revenue stats)
+const getAdRevenue = async (req, res) => {
+  try {
+    // For demonstration, fetch the authenticated user (assumes authentication middleware sets req.user)
+    const user = await User.findById(req.user.id).lean();
+    if (!user || !user.isPartner) {
+      return res.status(404).json({ error: 'Partner not found' });
+    }
+    // Simulate ad revenue stats (replace with real data as needed)
+    const adRevenue = {
+      totalRevenue: user.adRevenue || 0,
+      monthlyRevenue: user.adRevenue ? (user.adRevenue / 12) : 0
+    };
+    res.status(200).json(adRevenue);
+  } catch (error) {
+    console.error("Error fetching ad revenue:", error);
+    res.status(500).json({ error: "Failed to fetch ad revenue" });
+  }
+};
+
+// Get partner campaigns (simulate campaign data)
+const getCampaigns = async (req, res) => {
+  try {
+    // In a real application, you would query your Campaign collection with a filter such as { partnerId: req.user.id }
+    const campaigns = [
+      { name: "Campaign A", status: "active", description: "Promo campaign A" },
+      { name: "Campaign B", status: "completed", description: "Promo campaign B" },
+    ];
+    res.status(200).json(campaigns);
+  } catch (error) {
+    console.error("Error fetching campaigns:", error);
+    res.status(500).json({ error: "Failed to fetch campaigns" });
+  }
+};
+
+// Update Partner Tier and Reward Policy
+const updateTierAndReward = async (req, res) => {
+  try {
+    const { tier, rewardPolicy } = req.body;
+    // Use req.user.id from the authentication middleware
+    const user = await User.findById(req.user.id);
+    if (!user || !user.isPartner) {
+      return res.status(404).json({ error: 'Partner not found' });
+    }
+    
+    // Update the partner's tier and reward policy
+    user.partnerTier = tier; // For example, store "premium", "vip", etc.
+    user.rewardPolicy = rewardPolicy;
+    
+    await user.save();
+    res.status(200).json({ message: 'Partner tier and reward policy updated successfully.' });
+  } catch (error) {
+    console.error('Tier update error:', error);
+    res.status(500).json({ error: 'Failed to update tier settings', details: error.message });
+  }
+};
+
+// Create a new campaign for a partner
+const createCampaign = async (req, res) => {
+  try {
+    const { name, description } = req.body;
+    
+    // Create a new campaign. We assume that a campaign has:
+    // - name, description, partnerId, and a default status (e.g., "open").
+    const newCampaign = new Campaign({
+      name,
+      description,
+      partnerId: req.user.id, // Authenticated partner
+      status: 'open'
+    });
+    
+    await newCampaign.save();
+    res.status(201).json({ message: 'Campaign created successfully', campaign: newCampaign });
+  } catch (error) {
+    console.error('Campaign creation error:', error);
+    res.status(500).json({ error: 'Failed to create campaign', details: error.message });
+  }
+};
+
+const markCampaignComplete = async (req, res) => {
+  try {
+      const { campaignId } = req.body;
+      const userId = req.user.id; // Assuming authentication middleware sets req.user
+
+      // Find the campaign
+      const campaign = await Campaign.findById(campaignId);
+      if (!campaign) {
+          return res.status(404).json({ error: 'Campaign not found' });
+      }
+
+      // Check if the user has already completed the campaign
+      if (campaign.completedUsers.includes(userId)) {
+          return res.status(400).json({ error: 'Campaign already completed by user' });
+      }
+
+      // Mark campaign as completed for the user
+      campaign.completedUsers.push(userId);
+      await campaign.save();
+
+      // Grant reward based on campaign type
+      let rewardType = '';
+      let rewardValue = 0;
+
+      if (campaign.type === 'share') {
+          rewardType = 'points';
+          rewardValue = 10; // Reward 10 points for sharing
+      } else if (campaign.type === 'invite') {
+          rewardType = 'subscription';
+          rewardValue = 1; // 1-month subscription extension
+      }
+
+      // Save reward to scratch card collection
+      const scratchCard = new ScratchCard({
+          userId,
+          rewardType,
+          rewardValue,
+      });
+
+      await scratchCard.save();
+
+      res.status(200).json({ 
+          message: 'Campaign marked as completed!', 
+          reward: { type: rewardType, value: rewardValue } 
+      });
+  } catch (error) {
+      console.error('Error marking campaign as complete:', error);
+      res.status(500).json({ error: 'Failed to mark campaign as complete' });
   }
 };
 
@@ -223,6 +364,10 @@ const signUp = async (req, res) => {
 };
 
 module.exports = {
+  markCampaignComplete,
+  getAllPartners,
+  getAdRevenue,
+  getCampaigns,
   getPartnerStatus,
   signUpAsPartner,
   getReferralRevenue,
@@ -230,4 +375,6 @@ module.exports = {
   requestPayout,
   trackPromotion,
   signUp,
+  updateTierAndReward,
+  createCampaign,
 };

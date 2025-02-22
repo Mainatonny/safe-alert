@@ -1,0 +1,7 @@
+Server running on port 5000
+MongoDB Connected
+Request: GET /api/logs
+Request: GET /api/server/status
+Request: GET /api/logs
+Request: GET /api/server/status
+Request: GET /api/logs

@@ -16,7 +16,7 @@ const router = express.Router();
 router.use(authMiddleware); // Ensure the user is authenticated before proceeding with any of the following routes
 
 // Get user's subscription details
-router.get('/', getSubscription);
+router.get('/', authMiddleware,  getSubscription);
 
 // Create a new subscription (requires subscriptionType and endDate)
 router.post(
@@ -34,7 +34,16 @@ router.post(
   '/upgrade',
   [
     check('tier', 'Subscription tier is required').not().isEmpty(),
-    validateRequest,  // Validates the request before passing it to the controller
+    authMiddleware,  // Validates the request before passing it to the controller
+  ],
+  handleTierUpgrade
+);
+
+router.put(
+  '/upgrade',
+  [
+    check('tier', 'Subscription tier is required').not().isEmpty(),
+    authMiddleware,  // Validates the request before passing it to the controller
   ],
   handleTierUpgrade
 );
@@ -44,7 +53,7 @@ router.post(
   '/points',
   [
     check('pointsEarned', 'Points earned must be a number').isNumeric(),
-    validateRequest,  // Validates the request before passing it to the controller
+    authMiddleware,  // Validates the request before passing it to the controller
   ],
   earnPoints
 );
@@ -54,7 +63,7 @@ router.post(
   '/extend',
   [
     check('pointsToUse', 'Points to use must be a number').isNumeric(),
-    validateRequest,  // Validates the request before passing it to the controller
+    authMiddleware,  // Validates the request before passing it to the controller
   ],
   extendSubscription
 );

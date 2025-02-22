@@ -17,6 +17,10 @@ const authRoutes = require('./routes/authRoutes');
 const emergencyRoutes = require('./routes/emergencyRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const rewardRoutes = require('./routes/rewardRoutes');
+const compensationRoutes = require('./routes/compensationRoutes');
+const lotteryRoutes = require('./routes/lotteryRoutes');
+const systemRoutes = require('./routes/systemRoutes');
+
 
 
 // const notificationRoutes = require('./routes/notificationRoutes');**/
@@ -50,6 +54,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/emergency', emergencyRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/rewards', rewardRoutes);
+app.use('/api', compensationRoutes);
+app.use('/api/lottery', lotteryRoutes);
+app.use('/api/system', systemRoutes);
 
 // app.use('/api/notifications', notificationRoutes);
 

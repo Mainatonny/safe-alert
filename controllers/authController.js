@@ -3,6 +3,8 @@
 const { generateToken } = require('../utils/jwtUtils'); // Import the utility function
 const User = require('../models/User');
 const bcrypt = require('bcrypt');
+const ScratchCard = require('../models/ScratchCard');
+//const { generateScratchCards } = require('../controllers/scratchCardController');
 
 // Handle user login
 const login = async (req, res) => {
@@ -24,6 +26,7 @@ const login = async (req, res) => {
     // Optionally, store the token in the user's document (if needed)
     user.token = token;
     await user.save();
+    //await generateScratchCards(user._id);
 
     res.json({ userId: user._id, token }); // Send the token and user ID in the response
   } catch (error) {
@@ -59,3 +62,4 @@ const register = async (req, res) => {
 };
 
 module.exports = { login, register };
+ 

@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema({
   token: { type: String },
   referralCode: { type: String, unique: true, sparse: true },
   points: { type: Number, default: 0 },
-  subscriptionTier: { type: String, enum: ['free', 'paid'], default: 'free' },
+  subscriptionTier: { type: String, enum: ['free', 'premium', 'vip'], default: 'free' },
   subscriptionExpiry: { type: Date },
   contacts: [{ name: String, phone: String }],
   isPartner: { type: Boolean, default: false },

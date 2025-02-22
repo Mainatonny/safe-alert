@@ -36,11 +36,12 @@ const createSubscription = async (req, res) => {
 // Fetch subscription details
 const getSubscription = async (req, res) => {
   try {
-    if (!req.userId) {
+    // Use req.user and check that it has an id
+    if (!req.user || !req.user.id) {
       return res.status(401).json({ success: false, message: 'Unauthorized: No user information available.' });
     }
 
-    const user = await User.findById(req.userId);
+    const user = await User.findById(req.user.id);
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found.' });
     }
@@ -57,6 +58,7 @@ const getSubscription = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+
 
 // Handle subscription tier upgrade with transactions
 const handleTierUpgrade = async (req, res) => {
@@ -100,7 +102,8 @@ const handleTierUpgrade = async (req, res) => {
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
-    res.status(500).json({ error: 'Subscription upgrade failed' });
+    console.error('Subscription upgrade failed:', error);
+    res.status(500).json({ error: 'Subscription upgrade failed', details: error.message });
   }
 };
 

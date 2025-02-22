@@ -1,8 +1,24 @@
 const Wallet = require('../models/Wallet');
 const User = require('../models/User');
+const Payment = require('../models/Payment');
+
+const getPayments = async (req, res) => {
+  try {
+    
+    const payments = await Payment.find({ userId: req.user.id });
+
+    res.status(200).json(payments);
+  } catch (error) {
+    console.error("Error retrieving payments:", error);
+    res.status(500).json({
+      message: "Error retrieving payments",
+      error: error.message || error.toString()
+    });
+  }
+};
 
 const addFunds = async (req, res) => {
-  const { userId, amount } = req.body;
+  const { userId, amount, paymentMethod } = req.body;
 
   if (amount <= 0) {
     return res.status(400).json({ error: 'Amount must be greater than zero.' });
@@ -20,12 +36,25 @@ const addFunds = async (req, res) => {
     wallet.transactionHistory.push({
       type: 'top-up',
       amount,
-      description: `Funds added to wallet. Payment method: ${req.body.paymentMethod}`,
+      description: `Funds added to wallet. Payment method: ${paymentMethod}`,
     });
 
     await wallet.save();
+
+    // Create a new payment document
+    const newPayment = new Payment({
+      userId,
+      amount,
+      paymentMethod,
+      description: `Funds added to wallet. Payment method: ${paymentMethod}`,
+      date: new Date()
+    });
+
+    await newPayment.save();
+
     res.status(200).json({ message: 'Funds added successfully!', balance: wallet.balance });
   } catch (error) {
+    console.error('Error adding funds:', error);
     res.status(500).json({ error: 'Error adding funds.' });
   }
 };
@@ -115,6 +144,7 @@ const processPayment = async (req, res) => {
 };
 
 module.exports = {
+  getPayments,
   addFunds,
   deductFunds,
   getWalletBalance,

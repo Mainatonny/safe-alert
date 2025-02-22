@@ -1,80 +1,108 @@
 const ScratchCard = require('../models/ScratchCard'); // Keep only one declaration
 const User = require('../models/User');
 
-const getScratchCard = async (req, res) => {
-  const { userId, activityType } = req.body; // userId and type of activity that triggered the reward
 
-  // Define reward logic based on activity
-  let rewardType = '';
-  let rewardValue = 0;
 
-  if (activityType === 'login') {
-    rewardType = 'points';
-    rewardValue = 10; // Give 10 points for logging in
-  } else if (activityType === 'challenge') {
-    rewardType = 'subscription';
-    rewardValue = 1; // 1-month subscription extension
-  } else if (activityType === 'campaign') {
-    rewardType = 'goods';
-    rewardValue = 1; // 1 item from the app’s goods list
-  }
-
+const generateScratchCards = async (req, res) => {
   try {
-    const newScratchCard = new ScratchCard({
-      userId,
+    const userId = req.user.id;
+
+    // Generate scratch card with a random reward (or 0 points)
+    const rewardType = Math.random() < 0.5 ? "points" : "subscription"; // Example logic
+    const rewardValue = rewardType === "points" ? Math.floor(Math.random() * 100) : 1; // Up to 100 points
+
+    const scratchCard = new ScratchCard({
+      userId , // Convert to ObjectId
       rewardType,
       rewardValue,
+      isScratched: false,
     });
 
-    await newScratchCard.save();
-    res.status(200).json({ message: 'Scratch card awarded!', scratchCard: newScratchCard });
+    await scratchCard.save();
+    console.log("✅ Scratch card created for:", userId);
+    return scratchCard;
   } catch (error) {
-    res.status(500).json({ error: 'Error awarding scratch card.' });
+    console.error("❌ Error generating scratch card:", error);
   }
 };
 
 const redeemScratchCard = async (req, res) => {
-  const { scratchCardId } = req.body;
-
   try {
+    const { scratchCardId } = req.body;
+    const userId = req.user.id;
+
+    // Find scratch card
     const scratchCard = await ScratchCard.findById(scratchCardId);
-
     if (!scratchCard) {
-      return res.status(400).json({ error: 'Invalid scratch card.' });
+      return res.status(404).json({ error: "Scratch card not found." });
     }
-
-    // Prevent already scratched cards from being redeemed again
     if (scratchCard.isScratched) {
-      return res.status(400).json({ error: 'Card already redeemed.' });
+      return res.status(400).json({ error: "Scratch card already used." });
     }
 
-    // Mark card as scratched
+    // Check user's daily points
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    // Get today's date (reset at midnight)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Calculate total points earned today
+    const totalPointsToday = user.pointsHistory
+      .filter(entry => new Date(entry.date).getTime() === today.getTime())
+      .reduce((sum, entry) => sum + entry.points, 0);
+
+    if (totalPointsToday >= 100) {
+      return res.status(400).json({ error: "Daily points limit reached (100 points)." });
+    }
+
+    // Generate random points between 10 and 100
+    const earnedPoints = Math.min(100 - totalPointsToday, Math.floor(Math.random() * 91) + 10);
+
+    // Update user points
+    user.points += earnedPoints;
+    user.pointsHistory.push({ date: new Date(), points: earnedPoints });
+    await user.save();
+
+    // Mark scratch card as scratched
     scratchCard.isScratched = true;
     await scratchCard.save();
 
-    // Update the user's account based on the reward type
-    const user = await User.findById(scratchCard.userId);
+    res.status(200).json({ message: "Scratch card redeemed!", points: earnedPoints });
+  } catch (error) {
+    console.error("Redeem error:", error);
+    res.status(500).json({ error: "Failed to redeem scratch card." });
+  }
+};
 
-    if (scratchCard.rewardType === 'points') {
-      user.points += scratchCard.rewardValue; // Add points to the user's account
-    } else if (scratchCard.rewardType === 'subscription') {
-      user.subscriptionEndDate = new Date(new Date().setMonth(new Date().getMonth() + scratchCard.rewardValue)); // Add 1 month to subscription
-    } else if (scratchCard.rewardType === 'goods') {
-      user.goods.push('App Item'); // Add goods item to the user's account (can be customized)
+
+
+const getUserScratchCards = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    console.log(`Fetching scratch cards for user: ${userId}`);
+
+    const scratchCards = await ScratchCard.find({ userId });
+
+    if (scratchCards.length === 0) {
+      console.log("No scratch cards found.");
+    } else {
+      console.log("Scratch cards retrieved:", scratchCards);
     }
 
-    await user.save();
-    res.status(200).json({
-      message: 'Scratch card redeemed successfully!',
-      reward: scratchCard.rewardType,
-      value: scratchCard.rewardValue,
-    });
+    res.json({ scratchCards });
   } catch (error) {
-    res.status(500).json({ error: 'Error redeeming scratch card.' });
+    console.error("Error fetching scratch cards:", error);
+    res.status(500).json({ error: "Server error" });
   }
 };
 
 module.exports = {
-  getScratchCard,
+  
   redeemScratchCard,
+  getUserScratchCards,
+  generateScratchCards ,
 };

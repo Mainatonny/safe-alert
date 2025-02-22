@@ -6,6 +6,19 @@ const path = require('path');
 // --------------------------
 // File Upload Configuration
 // --------------------------
+
+const getReports = async (req, res) => {
+  try {
+    // Change 'reporter' to 'userId'
+    const reports = await Report.find().populate('userId', 'name email');
+    res.status(200).json(reports);
+  } catch (error) {
+    console.error("Error retrieving reports:", error);
+    res.status(500).json({ message: "Error retrieving reports", error: error.message });
+  }
+};
+
+
 const getUploadDir = (req) => {
   console.log('[Upload] Received userId:', req.body.userId);
   if (!req.body.userId) {
@@ -77,8 +90,15 @@ const uploadEvidence = async (req, res) => {
     }
 
     // ... rest of your code ...
+    return res.status(200).json({
+      message: 'Evidence uploaded successfully!',
+      filePath: req.file.path,
+      fileName: req.file.filename,
+    });
   } catch (error) {
     // ... error handling ...
+    console.error('[Upload] Error processing file:', error);
+    return res.status(500).json({ error: 'Error processing file upload', details: error.message });
   }
 };
 const submitReport = async (req, res) => {
@@ -98,4 +118,6 @@ const submitReport = async (req, res) => {
   }
 };
 
-module.exports = { upload, uploadEvidence, submitReport };
+
+
+module.exports = { upload, uploadEvidence, submitReport, getReports };

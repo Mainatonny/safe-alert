@@ -6,9 +6,8 @@ const notificationSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
-  type: {
+  notificationType: { // renamed from "type" to avoid conflicts
     type: String,
-    enum: ['reward', 'report', 'subscription', 'payment', 'system'],
     required: true,
   },
   message: {
