@@ -4,9 +4,11 @@ const generateReferralCode = () => Math.random().toString(36).substring(2, 8).to
 
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
+
   email: { type: String, unique: true, required: true },
   password: { type: String, required: true },
   token: { type: String },
+  userId: { type: String,  unique: true },
   referralCode: { type: String, unique: true, sparse: true },
   points: { type: Number, default: 0 },
   subscriptionTier: { type: String, enum: ['free', 'premium', 'vip'], default: 'free' },
