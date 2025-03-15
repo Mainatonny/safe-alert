@@ -66,35 +66,25 @@ const userLogin = async (req, res) => {
   const { userId, password } = req.body;
 
   try {
-    // Validate userId format
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
+    // Find user by userId (which is now stored as `_id`)
+    const user = await User.findById(userId);
+    
+    if (!user) {
       return res.status(400).json({ message: 'Invalid user ID' });
     }
 
-    // Find user by _id
-    const user = await User.findOne({ _id: userId });
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Compare passwords
+    // Check password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    // Generate token
-    const token = generateToken(user._id, 'user');
-    user.token = token;
-    await user.save();
-
-    res.json({ userId: user._id, token });
+    res.status(200).json({ message: 'Login successful', userId: user._id });
   } catch (error) {
-    console.error('Error during user login:', error);
+    console.error('Error during login:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
-
 const adminLogin = async (req, res) => {
   const { username, password } = req.body; // Use username instead of email
 
