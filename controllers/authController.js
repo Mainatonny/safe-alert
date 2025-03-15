@@ -125,6 +125,32 @@ const adminLogin = async (req, res) => {
   }
 };
 
+const userRegister = async (req, res) => {
+  const { userId, name, email, password } = req.body; // Accept userId from frontend
+
+  try {
+    // Check if the email or userId is already in use
+    const existingUser = await User.findOne({ $or: [{ email }, { _id: userId }] });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User ID or email already exists' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new User({ _id: userId, name, email, password: hashedPassword });
+
+    await newUser.save();
+    const token = generateToken(newUser._id, newUser.role);
+
+    newUser.token = token;
+    await newUser.save();
+
+    res.status(201).json({ userId: newUser._id, token });
+  } catch (error) {
+    console.error('Error during registration:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 const createAdmin = async (req, res) => {
   const { name, username, password } = req.body;
 
@@ -150,5 +176,5 @@ const createAdmin = async (req, res) => {
   }
 };
 
-module.exports = { login, register, userLogin, adminLogin, createAdmin };
+module.exports = { login, register, userLogin, adminLogin, createAdmin, userRegister };
  
