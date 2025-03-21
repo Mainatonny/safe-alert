@@ -8,7 +8,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, unique: true, required: true },
   password: { type: String, required: true },
   token: { type: String },
-  _id: { type: String, required: true }, 
+  
   userId: { type: String,  unique: true },
   referralCode: { type: String, unique: true, sparse: true },
   points: { type: Number, default: 0 },

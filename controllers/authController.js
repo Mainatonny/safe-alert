@@ -10,28 +10,36 @@ const ScratchCard = require('../models/ScratchCard');
 // Handle user login
 const login = async (req, res) => {
   const { email, password } = req.body;
+  console.log('Login request received with:', email, password ? 'Password provided' : 'No password'); 
 
   try {
+    if (!email || !password) {
+      console.log('Missing email or password');
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
+
     const user = await User.findOne({ email });
     if (!user) {
+      console.log('User not found for email:', email);
       return res.status(404).json({ message: 'User not found' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
+      console.log('Invalid password for:', email);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    const token = generateToken(user._id, user.role); // Generate the token using the utility function
-
-    // Optionally, store the token in the user's document (if needed)
+    const token = generateToken(user._id, user.role);
     user.token = token;
     await user.save();
-    //await generateScratchCards(user._id);
 
-    res.json({ userId: user._id, token }); // Send the token and user ID in the response
+    console.log('Login successful for:', email);
+    res.json({ userId: user._id, token });
+
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Login server error:', error); // Capture full error details
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
