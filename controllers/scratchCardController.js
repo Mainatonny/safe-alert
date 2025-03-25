@@ -28,19 +28,15 @@ const generateScratchCards = async (req, res) => {
 
 const redeemScratchCard = async (req, res) => {
   try {
-    const { scratchCardId } = req.body;
+    const { points } = req.body; // Accept points from frontend
     const userId = req.user.id;
 
-    // Find scratch card
-    const scratchCard = await ScratchCard.findById(scratchCardId);
-    if (!scratchCard) {
-      return res.status(404).json({ error: "Scratch card not found." });
-    }
-    if (scratchCard.isScratched) {
-      return res.status(400).json({ error: "Scratch card already used." });
+    // Validate points
+    if (typeof points !== 'number' || points < 10 || points > 100) {
+      return res.status(400).json({ error: "Invalid points value (must be between 10-100)" });
     }
 
-    // Check user's daily points
+    // Find user
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ error: "User not found." });
@@ -59,26 +55,52 @@ const redeemScratchCard = async (req, res) => {
       return res.status(400).json({ error: "Daily points limit reached (100 points)." });
     }
 
-    // Generate random points between 10 and 100
-    const earnedPoints = Math.min(100 - totalPointsToday, Math.floor(Math.random() * 91) + 10);
+    // Check if adding the points would exceed the limit
+    if (totalPointsToday + points > 100) {
+      return res.status(400).json({
+        error: `Cannot add ${points} points (would exceed daily limit). Remaining today: ${100 - totalPointsToday}`
+      });
+    }
 
     // Update user points
-    user.points += earnedPoints;
-    user.pointsHistory.push({ date: new Date(), points: earnedPoints });
+    user.points += points;
+    user.pointsHistory.push({
+      date: new Date(),
+      points: points,
+      source: 'spin_wheel'
+    });
     await user.save();
 
-    // Mark scratch card as scratched
-    scratchCard.isScratched = true;
-    await scratchCard.save();
+    res.status(200).json({ 
+      message: "Points redeemed successfully!", 
+      points: points,
+      dailyTotal: totalPointsToday + points,
+      remainingDaily: 100 - (totalPointsToday + points)
+    });
 
-    res.status(200).json({ message: "Scratch card redeemed!", points: earnedPoints });
   } catch (error) {
     console.error("Redeem error:", error);
-    res.status(500).json({ error: "Failed to redeem scratch card." });
+    res.status(500).json({ error: "Failed to redeem points." });
   }
 };
 
+const getUserPoints = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Find the user in the database
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
 
+    // Return the total points
+    res.status(200).json({ totalPoints: user.points });
+  } catch (error) {
+    console.error("Error fetching user points:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
 
 const getUserScratchCards = async (req, res) => {
   try {
@@ -105,4 +127,5 @@ module.exports = {
   redeemScratchCard,
   getUserScratchCards,
   generateScratchCards ,
+  getUserPoints,
 };

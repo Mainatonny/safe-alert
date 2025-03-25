@@ -1,5 +1,5 @@
 const express = require('express');
-const { redeemScratchCard, getUserScratchCards, generateScratchCards } = require('../controllers/scratchCardController');
+const { redeemScratchCard, getUserScratchCards, generateScratchCards, getUserPoints, } = require('../controllers/scratchCardController');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 
@@ -11,6 +11,8 @@ router.post('/generate', authMiddleware, generateScratchCards);
 router.post('/redeem',authMiddleware, redeemScratchCard);
 
 router.get('/',authMiddleware , getUserScratchCards);
+
+router.get("/points", authMiddleware, getUserPoints);
 
 
 

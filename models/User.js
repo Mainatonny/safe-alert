@@ -12,6 +12,13 @@ const userSchema = new mongoose.Schema({
   userId: { type: String,  unique: true },
   referralCode: { type: String, unique: true, sparse: true },
   points: { type: Number, default: 0 },
+  pointsHistory: [
+    {
+      date: { type: Date, required: true },
+      points: { type: Number, required: true },
+      source: { type: String, required: true },
+    },
+  ],
   subscriptionTier: { type: String, enum: ['free', 'premium', 'vip'], default: 'free' },
   subscriptionExpiry: { type: Date },
   contacts: [{ name: String, phone: String }],
